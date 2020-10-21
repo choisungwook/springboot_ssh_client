@@ -13,21 +13,22 @@ import org.springframework.web.socket.WebSocketSession;
 import ssh2.springboot_ssh_client.websocket.dao.Requset_connect_SSHServer_DAO;
 import ssh2.springboot_ssh_client.websocket.ConstantPool;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Arrays;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
 public class SSHClientHandlerImpl implements SSHClientHandler{
     private static Map<String, Object> sshMap = new ConcurrentHashMap<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
+    private PipedInputStream pinWrapper = new PipedInputStream(4096);
+    private PipedOutputStream pout;
 
     @Override
     public void initConnection(WebSocketSession session) {
@@ -77,7 +78,7 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
                 try {
                     sendCommand_to_SSHServer(sshConnectionInfo.getChannel(), command);
                 } catch (IOException e) {
-                    log.error("[-] Sending Command to SSHServer is error");
+                    log.error("[-] Sending Command to SSHServer is error: " + e);
                     close(session);
                 }
             }
@@ -129,17 +130,36 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
 
         // ssh 채널 생성
         Channel channel = session.openChannel("shell");
+        channel.connect();
         sshConnectionInfo.setChannel(channel);
+
+        sendCommand_to_SSHServer(channel, "\r");
 
         // == ssh서버의 명령어 실행 결과를 수신 ==//
         InputStream inputStream = channel.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
         try{
             byte[] buffer = new byte[1024];
             int readsize = 0;
-            while((readsize = inputStream.read(buffer)) != -1){
-                sendMessage(webSocketSession, Arrays.copyOfRange(buffer, 0, readsize));
+            log.info("[*******] start");
+            String results;
+            while((results = reader.readLine()) != null){
+                log.info(results);
+                TimeUnit.MILLISECONDS.sleep(100);
             }
-        }finally {
+//            while(true){
+//                while(inputStream.available() > 0){
+//                    readsize = inputStream.read(buffer);
+//                    log.info("[*******] start" + buffer);
+//                    sendMessage(webSocketSession, Arrays.copyOfRange(buffer, 0, readsize));
+//                }
+//                TimeUnit.MILLISECONDS.sleep(100);
+//            }
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
             session.disconnect();
             channel.disconnect();
             if(inputStream != null){
@@ -155,8 +175,9 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
      */
     private void sendCommand_to_SSHServer(Channel channel, String command) throws IOException {
         if(channel != null){
+            command = command + "\r";
             OutputStream outputStream = channel.getOutputStream();
-            outputStream.write(command.getBytes());
+            outputStream.write(command.getBytes(StandardCharsets.UTF_8));
             outputStream.flush();
         }
     }
