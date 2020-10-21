@@ -28,7 +28,7 @@ public class WebsocketHandler implements WebSocketHandler {
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-
+        log.error("[-] wbesocket connection is error");
     }
 
     @Override
