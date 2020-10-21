@@ -65,7 +65,7 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
                     try {
                         connect_to_SSHServer(sshConnectionInfo, final_request, session);
                     } catch (JSchException | IOException e) {
-                        log.error("[-] connecting SSHServer is error");
+                        log.error("[-] connecting SSHServer is error: " + e.getMessage());
                         close(session);
                     }
                 }
@@ -120,12 +120,12 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
      */
     private void connect_to_SSHServer(SSHConnectionInfo sshConnectionInfo, Requset_connect_SSHServer_DAO request, WebSocketSession webSocketSession) throws JSchException, IOException {
         // == ssh 세션 설정 ==//
-        Session session = null;
+        Session session = sshConnectionInfo.getJSch().getSession(request.getUsername(), request.getHost(), request.getPort());
         Properties config = new Properties();
         config.put("StrictHostKeyChecking", "no");
-        session = sshConnectionInfo.getJSch().getSession(request.getUsername(), request.getHost(), request.getPort());
         session.setConfig(config);
         session.setPassword(request.getPassword());
+        session.connect();
 
         // ssh 채널 생성
         Channel channel = session.openChannel("shell");
