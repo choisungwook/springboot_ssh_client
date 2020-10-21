@@ -1,10 +1,168 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<!doctype html>
+<html>
 
+<head>
+  <link rel="stylesheet" href="/node_modules/xterm/css/xterm.css" />
+  <script src="/node_modules/xterm/lib/xterm.js"></script>
+</head>
+
+<body>
+  <div id="terminal"></div>
+
+  <script>
+    function SSHClient() {
+    };
+
+    SSHClient.prototype.connect = function (options) {
+      if (window.WebSocket) {
+        this._connection = new WebSocket("ws://127.0.0.1:8080/ssh");
+        console.log("Connecting the springboot server success");
+      } else {
+        options.onError('WebSocket Not Supprted');
+        return;
+      }
+      this._connection.onopen = function () {
+        options.onConnect();
+      };
+      this._connection.onmessage = function (evt) {
+        var recvData = evt.data;
+        console.log(recvData);
+        options.onData(recvData);
+      };
+      this._connection.onclose = function (evt) {
+        options.onClose();
+      }
+    };
+
+    SSHClient.prototype.send = function (data) {
+      this._connection.send(JSON.stringify(options));
+    };
+
+    // ssh서버 연결 요청
+    SSHClient.prototype.sendInitData = function (options) {
+      this._connection.send(JSON.stringify(options));
+    };
+
+    SSHClient.prototype.sendCommand = function (command) {
+      this._connection.send(JSON.stringify({"operator": "command", "command": command}));
+    };
+
+  </script>
+
+  <script>
+    var url = "ws://127.0.0.1:8080/ssh"
+    var shellprompt = "";
+    var cmd = '';
+
+    springTerminal({
+      operator: 'connect',
+      host: '127.0.0.1',
+      port: '2222',
+      username: 'test',
+      password: 'toor'
+    });
+
+    function springTerminal(options) {
+      var client = new SSHClient();
+      var term = new Terminal({
+        cols: 97,
+        rows: 37,
+        cursorBlink: true,
+        cursorStyle: "block"
+      });
+      term.open(document.getElementById('terminal'));
+      term.write('Connecting...');
+
+      /***
+       * 키보드 이벤트
+       **/
+      term.onKey(function (key) {
+        var printable = (!key.altKey && !key.altGraphKey && !key.ctrlKey && !key.metaKey);
+        key_code = key.domEvent.keyCode;
+        input_key = key.domEvent.key;
+
+        // 엔터키
+        if (key_code == 13) {
+          if (cmd === 'clear') {
+            term.clear();
+            cmd = '';
+          }
+          else { // 백엔드 전송
+            if (cmd.length == 0) {
+            } else {
+              term.writeln("");
+              client.sendCommand(cmd);
+              cmd = '';
+            }
+          }
+        } else if (key_code == 8) { // 백스페이스 키
+          term.write('\b \b');
+          cmd = cmd.slice(0, -1);
+        } else if (printable) {
+          cmd += key.key;
+          term.write(key.key);
+        }
+      });
+
+      /***
+       * 웹소켓 이벤트 리스너
+       **/
+      client.connect({
+        onError: function (error) {
+          term.write("Error: " + error + '\r\n');
+        },
+        onConnect: function () {
+          client.sendInitData(options);
+        },
+        onData: function (recvData) {
+          term.write(data);
+        },
+        onClose: function (){
+          term.write("\rconnection close");
+        }
+      });
+    }
+
+
+
+    // term.open(document.getElementById('terminal'),false);
+    // term.prompt = function () {
+    //   term.write('\r\n' + shellprompt);
+    // };
+
+    // term.writeln('Welcome to CKA');
+    // term.writeln('');
+    // // term.prompt();
+    // term.setOption('cursorBlink', true);
+
+    // var websocket = new WebSocket(url);
+    // websocket.onopen = function(e) {
+
+    // }
+    // websocket.onmessage = function(e) {
+    //   console.log(e.data);
+    //   // 프롬프트인지 검출 정규식
+    //   var prompt_regex = /<prompt_start>.*<prompt_end>/;
+    //   // 쉘 프롬프트 변경
+    //   if(prompt_regex.exec(e.data)){
+    //     shellprompt = e.data.replace("<prompt_start>", "").replace("<prompt_end>", "");
+    //     return;
+    //   }
+
+    //   if(e.data == shellprompt){
+    //     return;
+    //   }else{
+    //     term.writeln(e.data);
+    //     term.prompt();
+    //   }
+
+    // }
+    // websocket.onerror = function(e){
+    //   alert("error");
+    // }
+
+
+  </script>
 </body>
+
 </html>
