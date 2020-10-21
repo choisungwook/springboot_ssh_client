@@ -115,7 +115,7 @@
           client.sendInitData(options);
         },
         onData: function (recvData) {
-          term.write(data);
+          term.write(recvData);
         },
         onClose: function (){
           term.write("\rconnection close");
