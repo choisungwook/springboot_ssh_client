@@ -14,14 +14,11 @@ import ssh2.springboot_ssh_client.websocket.dao.Requset_connect_SSHServer_DAO;
 import ssh2.springboot_ssh_client.websocket.ConstantPool;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
@@ -30,6 +27,7 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
     private ExecutorService executorService = Executors.newCachedThreadPool();
     private PipedInputStream pinWrapper = new PipedInputStream(4096);
     private PipedOutputStream pout;
+    private PrintStream ps;
 
     @Override
     public void initConnection(WebSocketSession session) {
@@ -131,28 +129,28 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
 
         // ssh 채널 생성
         Channel channel = session.openChannel("shell");
+        OutputStream ops = channel.getOutputStream();
+        ps = new PrintStream(ops);
+        pout = new PipedOutputStream(pinWrapper);
+        channel.setOutputStream(pout);
         channel.connect();
         sshConnectionInfo.setChannel(channel);
 
-        sendCommand_to_SSHServer(channel, "\r");
-
-        // == ssh서버의 명령어 실행 결과를 수신 ==//
-        InputStream inputStream = channel.getInputStream();
-
         try{
-            byte[] buffer = new byte[1024];
-            int readsize = 0;
 
-            while((readsize = inputStream.read(buffer)) !=  -1){
-                sendMessage(webSocketSession, Arrays.copyOfRange(buffer, 0, readsize));
+            while(true){
+                if (pinWrapper.available() > 0) {
+                    final StringBuilder s = new StringBuilder();
+                    while(pinWrapper.available() > 0) {
+                        s.append((char) pinWrapper.read());
+                    }
+                    webSocketSession.sendMessage(new TextMessage(s.toString()));
+                    s.setLength(0);
+                }
             }
-
         } finally {
             session.disconnect();
             channel.disconnect();
-            if(inputStream != null){
-                inputStream.close();
-            }
         }
     }
 
@@ -163,10 +161,8 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
      */
     private void sendCommand_to_SSHServer(Channel channel, String command) throws IOException {
         if(channel != null){
-            command = command + "\r";
-            OutputStream outputStream = channel.getOutputStream();
-            outputStream.write(command.getBytes(StandardCharsets.UTF_8));
-            outputStream.flush();
+            ps.println(command);
+            ps.flush();
         }
     }
 }
