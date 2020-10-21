@@ -5,6 +5,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import ssh2.springboot_ssh_client.controller.dao.Requset_connect_SSHServer_DAO;
 import ssh2.springboot_ssh_client.websocket.ConstantPool;
@@ -38,9 +39,15 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
 
     }
 
+    /***
+     * 웹 소켓에 ssh응답 전달
+     * @param session
+     * @param buffer
+     * @throws IOException
+     */
     @Override
     public void sendMessage(WebSocketSession session, byte[] buffer) throws IOException {
-
+        session.sendMessage(new TextMessage(buffer);
     }
 
     @Override
