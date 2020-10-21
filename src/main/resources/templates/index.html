@@ -10,6 +10,7 @@
   <div id="terminal"></div>
 
   <script>
+    import { Terminal } from 'xterm';
     function SSHClient() {
     };
 
@@ -25,8 +26,7 @@
         options.onConnect();
       };
       this._connection.onmessage = function (evt) {
-        var recvData = evt.data;
-        console.log(recvData);
+        var recvData = evt.data.toString();
         options.onData(recvData);
       };
       this._connection.onclose = function (evt) {
@@ -88,12 +88,9 @@
             cmd = '';
           }
           else { // 백엔드 전송
-            if (cmd.length == 0) {
-            } else {
-              term.writeln("");
-              client.sendCommand(cmd);
-              cmd = '';
-            }
+            term.writeln("");
+            client.sendCommand(cmd);
+            cmd = '';
           }
         } else if (key_code == 8) { // 백스페이스 키
           term.write('\b \b');
