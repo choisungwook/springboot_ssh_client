@@ -1,4 +1,4 @@
-package ssh2.springboot_ssh_client.controller.dao;
+package ssh2.springboot_ssh_client.websocket.dao;
 
 import lombok.Getter;
 import lombok.Setter;

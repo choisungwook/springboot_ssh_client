@@ -7,11 +7,10 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.bcel.Const;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import ssh2.springboot_ssh_client.controller.dao.Requset_connect_SSHServer_DAO;
+import ssh2.springboot_ssh_client.websocket.dao.Requset_connect_SSHServer_DAO;
 import ssh2.springboot_ssh_client.websocket.ConstantPool;
 
 import java.io.IOException;
