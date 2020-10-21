@@ -3,10 +3,7 @@ package ssh2.springboot_ssh_client.websocket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.WebSocketMessage;
-import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.*;
 import ssh2.springboot_ssh_client.sshclient.SSHClientHandlerImpl;
 
 @Component
@@ -23,7 +20,12 @@ public class WebsocketHandler implements WebSocketHandler {
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-
+        if(message instanceof TextMessage){
+            log.info("[*] 웹소켓 메세지 " + session.getAttributes().get(ConstantPool.USER_UUID_KEY));
+            sshClientHandler.recvHandle(((TextMessage) message).getPayload(), session);
+        }else {
+            log.error("[-] Unexpected WebSocket message type: " + message);
+        }
     }
 
     @Override
