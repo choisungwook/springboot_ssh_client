@@ -29,6 +29,8 @@ public class WebsockerInterceptor implements HandshakeInterceptor {
             String uuid = UUID.randomUUID().toString().replace("-","");
             log.info("[*] uuid: " + uuid);
             attributes.put(ConstantPool.USER_UUID_KEY, uuid);
+
+            return true;
         }
         return false;
     }
