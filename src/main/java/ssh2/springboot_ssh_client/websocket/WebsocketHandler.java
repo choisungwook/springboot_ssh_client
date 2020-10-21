@@ -7,7 +7,6 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
-import ssh2.springboot_ssh_client.sshclient.SSHClientHandler;
 import ssh2.springboot_ssh_client.sshclient.SSHClientHandlerImpl;
 
 @Component
@@ -34,7 +33,8 @@ public class WebsocketHandler implements WebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-
+        log.info("[*] Websocket is disconnected");
+        sshClientHandler.close(session);
     }
 
     @Override

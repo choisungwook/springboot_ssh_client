@@ -45,7 +45,15 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
 
     @Override
     public void close(WebSocketSession session) {
+        String userId = String.valueOf(session.getAttributes().get(ConstantPool.USER_UUID_KEY));
+        SSHConnectionInfo sshConnectionInfo = (SSHConnectionInfo) sshMap.get(userId);
 
+        if(sshConnectionInfo != null){
+            if(sshConnectionInfo.getChannel() != null){
+                sshConnectionInfo.getChannel().disconnect();
+            }
+            sshMap.remove(userId);
+        }
     }
 
     /***
