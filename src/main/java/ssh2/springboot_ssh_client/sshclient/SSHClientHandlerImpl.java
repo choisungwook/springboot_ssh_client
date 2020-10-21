@@ -15,6 +15,7 @@ import ssh2.springboot_ssh_client.websocket.ConstantPool;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -137,28 +138,15 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
 
         // == ssh서버의 명령어 실행 결과를 수신 ==//
         InputStream inputStream = channel.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
         try{
             byte[] buffer = new byte[1024];
             int readsize = 0;
-            log.info("[*******] start");
-            String results;
-            while((results = reader.readLine()) != null){
-                log.info(results);
-                TimeUnit.MILLISECONDS.sleep(100);
-            }
-//            while(true){
-//                while(inputStream.available() > 0){
-//                    readsize = inputStream.read(buffer);
-//                    log.info("[*******] start" + buffer);
-//                    sendMessage(webSocketSession, Arrays.copyOfRange(buffer, 0, readsize));
-//                }
-//                TimeUnit.MILLISECONDS.sleep(100);
-//            }
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            while((readsize = inputStream.read(buffer)) !=  -1){
+                sendMessage(webSocketSession, Arrays.copyOfRange(buffer, 0, readsize));
+            }
+
         } finally {
             session.disconnect();
             channel.disconnect();
