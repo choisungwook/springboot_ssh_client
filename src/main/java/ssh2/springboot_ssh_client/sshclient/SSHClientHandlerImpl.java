@@ -1,10 +1,13 @@
 package ssh2.springboot_ssh_client.sshclient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.bcel.Const;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -18,11 +21,14 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @Slf4j
 public class SSHClientHandlerImpl implements SSHClientHandler{
     private static Map<String, Object> sshMap = new ConcurrentHashMap<>();
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
     @Override
     public void initConnection(WebSocketSession session) {
@@ -38,7 +44,48 @@ public class SSHClientHandlerImpl implements SSHClientHandler{
 
     @Override
     public void recvHandle(String buffer, WebSocketSession session) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Requset_connect_SSHServer_DAO request = null;
 
+        try {
+            request = objectMapper.readValue(buffer, Requset_connect_SSHServer_DAO.class);
+        } catch (JsonProcessingException e) {
+            log.error("[-] request's translation task is error " + e.getMessage());
+        }
+
+        String userId = String.valueOf(session.getAttributes().get(ConstantPool.USER_UUID_KEY));
+        // 처음 클라이언트 요청시 ssh연결 작업 수행
+        if(ConstantPool.WEB_SSH_OPERATE_CONNECT.equals(request.getOperator())){
+            SSHConnectionInfo sshConnectionInfo = (SSHConnectionInfo) sshMap.get(userId);
+            Requset_connect_SSHServer_DAO final_request = request;
+
+            // 계속 ssh서버 실행결과를 수신하기 위해 쓰레드로 실행
+            executorService.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        connect_to_SSHServer(sshConnectionInfo, final_request, session);
+                    } catch (JSchException | IOException e) {
+                        log.error("[-] connecting SSHServer is error");
+                        close(session);
+                    }
+                }
+            });
+        }else if(ConstantPool.WEB_SSH_OPERATE_COMMAND.equals(request.getOperator())){ // 명령어 실행 요청
+            String command = request.getCommand();
+            SSHConnectionInfo sshConnectionInfo = (SSHConnectionInfo) sshMap.get(userId);
+            if(sshConnectionInfo != null){
+                try {
+                    sendCommand_to_SSHServer(sshConnectionInfo.getChannel(), command);
+                } catch (IOException e) {
+                    log.error("[-] Sending Command to SSHServer is error");
+                    close(session);
+                }
+            }
+        }else{ // 존재하지 않은 동작 요청
+            log.error("[-] Unknown requset command");
+            close(session);
+        }
     }
 
     /***
